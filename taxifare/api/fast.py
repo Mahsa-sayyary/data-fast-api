@@ -1,6 +1,8 @@
 import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from taxifare.ml_logic.registry import load_model
+from  taxifare.ml_logic.preprocessor import preprocess_features
 
 app = FastAPI()
 
@@ -22,13 +24,29 @@ def predict(
         dropoff_longitude: float,   # -73.984365
         dropoff_latitude: float,    # 40.769802
         passenger_count: int
-    ):      # 1
+    ):      # 2
     """
     Make a single course prediction.
     Assumes `pickup_datetime` is provided as a string by the user in "%Y-%m-%d %H:%M:%S" format
     Assumes `pickup_datetime` implicitly refers to the "US/Eastern" timezone (as any user in New York City would naturally write)
     """
-    pass  # YOUR CODE HERE
+    X_pred = pd.DataFrame(dict(
+        pickup_datetime=[pd.Timestamp(pickup_datetime, tz='UTC')],
+        pickup_longitude=[pickup_longitude],
+        pickup_latitude=[pickup_latitude],
+        dropoff_longitude=[dropoff_longitude],
+        dropoff_latitude=[dropoff_latitude],
+        passenger_count=[passenger_count],
+    ))
+
+    model = load_model()
+    assert model is not None
+
+    X_processed = preprocess_features(X_pred)
+    y_pred = model.predict(X_processed)
+    return {
+    'fare': float(y_pred)
+}
 
 
 @app.get("/")
